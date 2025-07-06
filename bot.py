@@ -64,13 +64,7 @@ async def get_city(message: types.Message, state: FSMContext):
         types.InlineKeyboardButton("1️⃣", callback_data="choice_1"),
         types.InlineKeyboardButton("2️⃣", callback_data="choice_2")
     )
-    await message.answer("""💡 Выбери, что тебе ближе:
-
-1️⃣ Хочешь денег сегодня?
-2️⃣ Хочешь денег всегда и много?""")
-
-1️⃣ Хочешь денег сегодня?
-2️⃣ Хочешь денег всегда и много?", reply_markup=keyboard)
+    await message.answer("💡 Выбери, что тебе ближе:\n\n1️⃣ Хочешь денег сегодня?\n2️⃣ Хочешь денег всегда и много?", reply_markup=keyboard)
 
 @dp.callback_query_handler(lambda c: c.data.startswith("choice_"), state=Funnel.final)
 async def process_choice(callback_query: types.CallbackQuery, state: FSMContext):
