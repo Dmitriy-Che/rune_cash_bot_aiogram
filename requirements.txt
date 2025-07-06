@@ -1,3 +1,6 @@
+aiogram==2.25.1
+aiohttp==3.8.4
 pandas==1.5.3
 numpy==1.23.5
 openpyxl==3.0.10
+apscheduler==3.10.1
