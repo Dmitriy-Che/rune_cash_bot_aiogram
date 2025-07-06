@@ -6,7 +6,6 @@ from aiogram.dispatcher import FSMContext
 import json
 import os
 import asyncio
-from random import choice
 import pandas as pd
 
 API_TOKEN = os.getenv("API_TOKEN")
@@ -25,9 +24,9 @@ else:
     config = {}
 
 class Funnel(StatesGroup):
-    name = State()
     age = State()
     city = State()
+    final = State()
 
 def save_lead(data):
     leads = []
@@ -44,14 +43,8 @@ def save_lead(data):
 
 @dp.message_handler(commands=['start'])
 async def start_funnel(message: types.Message):
-    await Funnel.name.set()
-    await message.answer(config["welcome_text"] + "\n\nКак тебя зовут?")
-
-@dp.message_handler(state=Funnel.name)
-async def get_name(message: types.Message, state: FSMContext):
-    await state.update_data(name=message.text.strip())
-    await Funnel.next()
-    await message.answer("Сколько тебе лет?")
+    await Funnel.age.set()
+    await message.answer(config["welcome_text"] + "\n\nСколько тебе лет?")
 
 @dp.message_handler(state=Funnel.age)
 async def get_age(message: types.Message, state: FSMContext):
@@ -65,23 +58,38 @@ async def get_age(message: types.Message, state: FSMContext):
 @dp.message_handler(state=Funnel.city)
 async def get_city(message: types.Message, state: FSMContext):
     await state.update_data(city=message.text.strip())
+    await Funnel.final.set()
+    keyboard = types.InlineKeyboardMarkup()
+    keyboard.add(
+        types.InlineKeyboardButton("1️⃣", callback_data="choice_1"),
+        types.InlineKeyboardButton("2️⃣", callback_data="choice_2")
+    )
+    await message.answer("💡 Выбери, что тебе ближе:
+
+1️⃣ Хочешь денег сегодня?
+2️⃣ Хочешь денег всегда и много?", reply_markup=keyboard)
+
+@dp.callback_query_handler(lambda c: c.data.startswith("choice_"), state=Funnel.final)
+async def process_choice(callback_query: types.CallbackQuery, state: FSMContext):
+    choice = callback_query.data.split("_")[1]
     data = await state.get_data()
     lead = {
-        "id": message.from_user.id,
-        "name": data["name"],
+        "id": callback_query.from_user.id,
         "age": data["age"],
         "city": data["city"],
-        "username": message.from_user.username
+        "username": callback_query.from_user.username,
+        "choice": choice
     }
     save_lead(lead)
 
-    for text in config["progress_texts"]:
-        await message.answer(text)
-        await asyncio.sleep(2)
+    await bot.answer_callback_query(callback_query.id)
+    await bot.send_message(callback_query.from_user.id, "🔮 Настраиваю твой денежный поток...")
+    await asyncio.sleep(2)
 
-    keyboard = types.InlineKeyboardMarkup()
-    keyboard.add(types.InlineKeyboardButton(text=config["button_text"], url=config["ref_link"]))
-    await message.answer(choice(config["offer_texts"]), reply_markup=keyboard)
+    link = config["ref_link_1"] if choice == "1" else config["ref_link_2"]
+    button = types.InlineKeyboardMarkup()
+    button.add(types.InlineKeyboardButton(config["button_text"], url=link))
+    await bot.send_message(callback_query.from_user.id, config["final_text"], reply_markup=button)
     await state.finish()
 
 @dp.message_handler()
